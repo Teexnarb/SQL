@@ -4,6 +4,7 @@ alter COLUMN age SET DEFAULT '20',
 alter COLUMN name SET NOT NULL,
 ADD CONSTRAINT name_unique UNIQUE (name);
 
+
 create table person (
 id integer primary key,
 name text,
@@ -12,12 +13,15 @@ is_driver boolean,
 car_id integer not null references car (id)
 );
 
+
+
 create table car(
 id integer primary key,
 make text,
 model text,
 price integer
 );
+
 
 select student.name, student.age
 from student
