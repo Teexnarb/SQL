@@ -1,6 +1,7 @@
 package pro.sku.SQL.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -19,5 +20,9 @@ public class InfoController {
     @GetMapping ("/port")
     public String getPort () {
         return infoService.getCurrentPort ();
+    }
+    @GetMapping ("/sum")
+    public ResponseEntity <Integer> getSum () {
+        return ResponseEntity.ok(infoService.getSum());
     }
 }

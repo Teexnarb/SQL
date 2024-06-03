@@ -110,4 +110,20 @@ public class StudentController {
         }
         return ResponseEntity.ok(lastStudents);
     }
+    @GetMapping ("/getStudentsNameStartsWith/{letter}")
+    public ResponseEntity <List<String>> getStudentsNameStartsWith(@ PathVariable ("letter") String letter) {
+        List <String> exp = studentService.getStudentsNameStartsWith (letter);
+        if (exp.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(exp);
+    }
+    @GetMapping ("/getAverageAgeWithStream")
+    public ResponseEntity <Double> getAverageAgeWithStream () {
+        Double age = studentService.getAverageAgeWithStream();
+        if (age==0) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(age);
+    }
 }

@@ -65,5 +65,14 @@ public class FacultyController {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(studentOfFaculty);
+
+    }
+    @GetMapping ("/getBiggestNameOfFaculty")
+    public ResponseEntity <String> getBiggestNameOfFaculty() {
+        String biggestName = String.valueOf(facultyService.getBiggestNameOfFaculty());
+        if (biggestName.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(biggestName);
     }
 }
