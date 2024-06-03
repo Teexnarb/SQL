@@ -5,5 +5,4 @@ import pro.sku.SQL.model.Avatar;
 
 public interface AvatarRepository extends JpaRepository<Avatar,Long> {
     Avatar findByStudentId(long id);
-//
 }

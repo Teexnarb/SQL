@@ -121,9 +121,19 @@ public class StudentController {
     @GetMapping ("/getAverageAgeWithStream")
     public ResponseEntity <Double> getAverageAgeWithStream () {
         Double age = studentService.getAverageAgeWithStream();
-        if (age==0) {
+        if (age == 0) {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(age);
+    }
+    @GetMapping ("/print-parallel")
+    public ResponseEntity <String> printParallel () {
+        studentService.printParallel ();
+        return ResponseEntity.ok("имена выведены в консоль");
+    };
+    @GetMapping ("/print-synchronized")
+    public ResponseEntity <String> printSynchronized() {
+        studentService.printSynchronized();
+        return ResponseEntity.ok("имена выведены в консоль");
     }
 }
