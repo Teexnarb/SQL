@@ -1,7 +1,6 @@
 package pro.sku.SQL.model;
 
 import jakarta.persistence.*;
-import org.springframework.data.annotation.Id;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -25,6 +24,7 @@ public class Avatar {
         this.fileSize = fileSize;
         this.mediaType = mediaType;
         this.data = data;
+        this.student = student;
     }
 
     public Avatar() {
