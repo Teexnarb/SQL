@@ -5,7 +5,6 @@ import pro.sku.SQL.model.Faculty;
 import pro.sku.SQL.model.Student;
 import pro.sku.SQL.repository.StudentRepository;
 
-
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;

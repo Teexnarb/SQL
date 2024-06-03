@@ -1,6 +1,5 @@
 package pro.sku.SQL.service;
 
-
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -8,7 +7,6 @@ import org.springframework.web.multipart.MultipartFile;
 import pro.sku.SQL.model.Avatar;
 import pro.sku.SQL.model.Student;
 import pro.sku.SQL.repository.AvatarRepository;
-
 
 import java.io.*;
 import java.nio.file.Files;
@@ -29,7 +27,6 @@ public class AvatarService {
         this.avatarRepository = avatarRepository;
         this.studentService = studentService;
     }
-
 
     public void uploadAvatar(Long studentId, MultipartFile file) throws IOException {
         Student student = studentService.findStudent(studentId);
