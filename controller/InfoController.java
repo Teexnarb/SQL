@@ -7,17 +7,16 @@ import org.springframework.web.bind.annotation.RestController;
 import pro.sku.SQL.service.InfoService;
 
 @RestController
-@RequestMapping ("/info")
+@RequestMapping("/port")
 public class InfoController {
-    @Autowired
     private final InfoService infoService;
-
+    @Autowired
     public InfoController(InfoService infoService) {
         this.infoService = infoService;
     }
 
-    @GetMapping ("/port")
-    public String getPort () {
-        return infoService.getCurrentPort ();
+    @GetMapping
+    Integer getPort() {
+        return infoService.getPort();
     }
 }

@@ -1,32 +1,11 @@
-alter table student
-add CONSTRAINT age_constraint CHECK ( age > 16 ),
-alter COLUMN age SET DEFAULT '20',
-alter COLUMN name SET NOT NULL,
-ADD CONSTRAINT name_unique UNIQUE (name);
+ALTER TABLE student
+    ADD CONSTRAINT age_constraint CHECK (age > 15);
 
+ALTER  TABLE student
+    ALTER COLUMN name SET NOT NULL;
 
-create table person (
-id integer primary key,
-name text,
-age integer,
-is_driver boolean,
-car_id integer not null references car (id)
-);
+ALTER TABLE faculty
+    ADD CONSTRAINT name_color_unique UNIQUE (name, color);
 
-
-
-create table car(
-id integer primary key,
-make text,
-model text,
-price integer
-);
-
-
-select student.name, student.age
-from student
-inner join faculty on student.faculty_id = faculty.id
-
-select student.name, student.age
-from student
-inner join avatar on student.id = avatar.id
+ALTER TABLE student
+    ALTER COLUMN age SET DEfAULT 20;
