@@ -23,6 +23,7 @@ public class StudentService {
         return studentRepository.save(student);
     }
 
+
     public Student findStudent(long id) {
         return studentRepository.findById(id).get();
     }

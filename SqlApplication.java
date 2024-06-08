@@ -8,6 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @OpenAPIDefinition
 public class SqlApplication {
 
+
 	public static void main(String[] args) {
 		SpringApplication.run(SqlApplication.class, args);
 	}

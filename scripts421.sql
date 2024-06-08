@@ -4,6 +4,7 @@ alter COLUMN age SET DEFAULT '20',
 alter COLUMN name SET NOT NULL,
 ADD CONSTRAINT name_unique UNIQUE (name);
 
+
 create table person (
 id integer primary key,
 name text,

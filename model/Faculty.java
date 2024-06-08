@@ -11,6 +11,7 @@ import java.util.Objects;
 @JsonIgnoreProperties(value = {"students"})
 public class Faculty {
 
+
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Id
     private Long id;

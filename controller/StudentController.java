@@ -26,6 +26,7 @@ public class StudentController {
         return studentService.createStudent(student);
     }
 
+
     @GetMapping("/findStudentById/{id}")
     public ResponseEntity<Student> findStudent(@PathVariable long id) {
         Student studentFound = studentService.findStudent(id);
