@@ -2,61 +2,77 @@ package pro.sku.SQL.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import pro.sku.SQL.model.Faculty;
-import pro.sku.SQL.model.Student;
 import pro.sku.SQL.repository.FacultyRepository;
 
-import java.util.*;
+import java.util.Collection;
 
 @Service
 public class FacultyService {
-    @Autowired
-    private FacultyRepository facultyRepository;
 
+    private final FacultyRepository facultyRepository;
+    private final Logger logger = LoggerFactory.getLogger(FacultyService.class);
     public FacultyService(FacultyRepository facultyRepository) {
         this.facultyRepository = facultyRepository;
     }
 
-    Logger logger = LoggerFactory.getLogger(FacultyService.class);
-
-    public Faculty createFaculty(Faculty faculty) {
-        logger.info("был вызван метод, чтобы создать факультет");
-
+    public Faculty addFaculty(Faculty faculty) {
+        logger.debug("Добавили факультет");
         return facultyRepository.save(faculty);
     }
 
-    public Faculty findFaculty(long id) {
-        logger.info("был вызван метод, чтобы найти факультет по идентификатору");
+    public Faculty findFaculty(Long id) {
+        logger.info("Поиск факультета");
         return facultyRepository.findById(id).get();
     }
 
     public Faculty editFaculty(Faculty faculty) {
-        logger.warn("был вызван метод, чтобы редактировать факультет");
+        if (facultyRepository.findById(faculty.getId()).isEmpty()) {
+            logger.warn("Факультет {} не найден", faculty);
+            return null;
+        }
         return facultyRepository.save(faculty);
     }
 
-    public void deleteFaculty(long id) {
-        logger.warn("был вызван метод, чтобы удалить факультет");
-        facultyRepository.deleteById(id);
+    public Faculty deleteFaculty(long id) {
+        logger.info("Удаление факультета по id: {}", id);
+        Faculty faculty = findFaculty(id);
+        if (faculty != null) {
+            facultyRepository.deleteById(id);
+        }
+        return faculty;
     }
 
-    public Collection<Faculty> findByNameOrColor(String color, String name) {
-        logger.info("был вызван метод, чтобы найти факультет по имени или цвету");
-        return facultyRepository.getByNameIgnoreCaseOrColorIgnoreCase(color, name);
+    public Collection<Faculty> findByColor(String color) {
+        logger.info("Получение списка факультетов по color: {}",  color);
+        return facultyRepository.findByColor(color);
     }
 
-    public Collection<Student> getAllStudentOfFaculty(long id) {
-        logger.info("был вызван метод, чтобы получить всех студентов факультета по его идентификатору");
-        return facultyRepository.getReferenceById(id).getStudents();
+    public Faculty findFirstFacultyByNameIgnoreCase(String name) {
+        logger.info("Получение факультета по имени {} с игнорированием регистра", name);
+        return facultyRepository.findFirstFacultyByNameIgnoreCase(name);
     }
 
-    public Optional<String> getBiggestNameOfFaculty() {
-        List <Faculty> faculties=facultyRepository.findAll();
+    public Faculty findFirstFacultyByColorIgnoreCase(String color) {
+        logger.info("Получение факультета по цвету {} с игнорированием регистра", color);
+        return facultyRepository.findFirstFacultyByColorIgnoreCase(color);
+    }
 
-        return faculties.stream()
-                .map (Faculty::getName)
-                .max (Comparator.comparingInt(String::length));
+    public Faculty findFacultyByStudentId(Long id) {
+        logger.info("Поиск факультета по id студента {} c использованием запроса", id);
+        return facultyRepository.findFacultyByStudentId(id);
+    }
+
+    public String getMaxLengthNameOfFaculty() {
+        String[] result = {""};
+        facultyRepository.findAll().stream()
+                .map(Faculty::getName)
+                .forEach(s -> {
+                    if (result[0].length() < s.length()) {
+                        result[0] = s;
+                    }
+                });
+        return  result[0];
     }
 }

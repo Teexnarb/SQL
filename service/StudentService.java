@@ -2,105 +2,182 @@ package pro.sku.SQL.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import pro.sku.SQL.model.Avatar;
 import pro.sku.SQL.model.Faculty;
 import pro.sku.SQL.model.Student;
+import pro.sku.SQL.repository.AvatarRepository;
 import pro.sku.SQL.repository.StudentRepository;
 
-import java.util.*;
+
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
+import java.util.NoSuchElementException;
+
+import static java.nio.file.StandardOpenOption.CREATE_NEW;
 
 @Service
+@Transactional
 public class StudentService {
 
-    private final StudentRepository studentRepository;
+    private static final int MAX_STUDENTS = 5;
+    private static final String PREFIX = "A";
+    private final Logger logger = LoggerFactory.getLogger(StudentService.class);
 
-    public StudentService(StudentRepository studentRepository) {
+    @Value("${avatars.dir.path}")
+    private String avatarsDir;
+    private final StudentRepository studentRepository;
+    private final AvatarRepository avatarRepository;
+
+    public StudentService(StudentRepository studentRepository, AvatarRepository avatarRepository) {
         this.studentRepository = studentRepository;
+        this.avatarRepository = avatarRepository;
     }
 
-    Logger logger = LoggerFactory.getLogger(StudentService.class);
-
-
-    public Student createStudent(Student student) {
-        logger.info("был вызван метод, чтобы создать студента");
+    public Student addStudent(Student student) {
+        logger.debug("Добавили студента");
         return studentRepository.save(student);
     }
 
     public Student findStudent(long id) {
-
-        logger.info("был вызван метод, чтобы найти студента по идентификатору");
+        logger.debug("Поиск студента");
         return studentRepository.findById(id).get();
     }
 
     public Student editStudent(Student student) {
-        logger.warn("был вызван метод, чтобы редактировать студента");
+        logger.info("Редактирование данных студента: {}", student);
+        if (studentRepository.findById(student.getId()).isEmpty()) {
+            logger.warn("Студенте {} не найден.", student);
+            return null;
+        }
         return studentRepository.save(student);
     }
 
-    public void deleteStudent(long id) {
-
-        logger.warn("был вызван метод, чтобы удалить студента");
-        studentRepository.deleteById(id);
+    public Student deleteStudent(long id) {
+        logger.info("Удление студента по id: {}", id);
+        Student student = findStudent(id);
+        if (student != null) {
+            studentRepository.deleteById(id);
+        }
+        return student;
     }
 
     public Collection<Student> findByAge(int age) {
-        logger.info("был вызван метод, чтобы найти студента по возрасту");
+        logger.info("Поиск студентов по age: {}", age);
         return studentRepository.findByAge(age);
     }
 
-    public List<Student> findByAgeBetween(int max, int min) {
-        logger.info("был вызван метод, чтобы найти студентов в диапозоне разных возрастов");
-        return studentRepository.findByAgeBetween(max, min);
+    public Collection<Student> findStudentByAgeBetween(int min, int max) {
+        logger.info("Поиск студентов в диапазоне возрастов от {} до {}", min, max);
+        return studentRepository.findStudentByAgeBetween(min, max);
     }
 
-    public Faculty findFacultyOfStudent(long id) {
-        logger.info("был вызван метод, чтобы найти факультет студента");
-        Optional<Student> student = studentRepository.findById(id);
-        if (student.isPresent()) {
-            return student.get().getFaculty();
-        } else {
+    public Faculty getFacultyOfStudent(Long id) {
+        logger.info("Поиск факультета по id: {} студента.", id);
+        Student student = studentRepository.findStudentById(id);
+        if (student == null) {
             return null;
         }
+        return student.getFaculty();
     }
 
-    public List<Student> getAllStudents() {
-        logger.info("был вызван метод, чтобы найти всех студентов");
-        return studentRepository.findAll();
+    public Collection<Student> getStudentsOfFaculty(Long id) {
+        logger.info("Поиск студентов по id факультета: {}", id);
+        return studentRepository.findStudentsByFaculty_Id(id);
     }
 
-    public int getAmountOfStudents() {
-        logger.info("был вызван метод, чтобы получить количество всех студентов");
-        return studentRepository.amountOfStudents();
+    public Avatar findAvatar(long studentId) {
+        logger.info("Поиск аватара по id студента: " + studentId);
+        return avatarRepository.findAvatarByStudent_Id(studentId).orElseThrow(() -> {
+            logger.error("Аватар с id: {} не найден", studentId);
+            return new NoSuchElementException("Аватар не найден.");
+        });
     }
 
-    public int getAverageAge() {
-        logger.info("был вызван метод, чтобы получить средний возраст студентов");
-        return studentRepository.averageAge();
+    public void uploadAvatar(Long studentId, MultipartFile file) throws IOException {
+        logger.info("Загрузка аватара по id студента: {}", studentId);
+        Student student = studentRepository.findStudentById(studentId);
+        Path filePath = Path.of(avatarsDir, studentId + "." + getExtension(file.getOriginalFilename()));
+        Files.createDirectories(filePath.getParent());
+        Files.deleteIfExists(filePath);
+        try (InputStream is = file.getInputStream();
+             OutputStream os = Files.newOutputStream(filePath, CREATE_NEW);
+             BufferedInputStream bis = new BufferedInputStream(is, 1024);
+             BufferedOutputStream bos = new BufferedOutputStream(os, 1024)){
+            bis.transferTo(bos);
+        }
+        Avatar avatar = avatarRepository.findAvatarByStudent_Id(studentId).orElseGet(Avatar::new);
+        avatar.setStudent(student);
+        avatar.setFilePath(filePath.toString());
+        avatar.setFileSize(file.getSize());
+        avatar.setMediaType(file.getContentType());
+        avatar.setData(generateImagePreview(filePath));
+        avatarRepository.save(avatar);
     }
 
-    public List<Student> getLastStudents() {
-        logger.info("был вызван метод, чтобы получить последних добавленных студентов");
-        return studentRepository.getLastStudents();
+    public int getAllStudents() {
+        logger.info("Получение всех студентов");
+        return studentRepository.getAllStudents();
     }
 
-    public List<String> getStudentsNameStartsWith(String letter) {
-        List <Student> exp = studentRepository.findAll();
+    public int getAverageAgeOfStudents() {
+        logger.info("Получение среднего возраста всех студентов");
+        return studentRepository.getAverageAgeOfStudents();
+    }
 
-        List <String> namesExp = exp
+    public List<Student> getFiveLastStudentById() {
+        if (getAllStudents() < 5) {
+            String message = "В базе не достаточно студентов.";
+            logger.error(message);
+            throw new UnsupportedOperationException(message);
+        }
+        return studentRepository.getFiveLastStudentById();
+    }
+
+    public List<String> getAllStudentStartWithA() {
+        logger.info("Получение отсортированного списка имен студентов начинающихся с {}",
+                PREFIX);
+        return studentRepository.findAll()
                 .stream()
-                .map(Student::getName)
-                .filter(name -> name.toUpperCase().startsWith(letter))
-                .sorted()
+                .filter(s -> s.getName().startsWith(PREFIX))
+                .map(s -> s.getName().toUpperCase())
+                .sorted(String::compareTo)
                 .toList();
-
-        return namesExp;
     }
-    public double getAverageAgeWithStream () {
-        List <Student> students =studentRepository.findAll();
-        return students
-                .stream()
-                .mapToDouble (Student::getAge)
-                .average()
-                .orElse(0);
+
+    public int getAverageAgeOfStudentsFromStream() {
+        logger.info("Получение среднего возраста всех студентов");
+        return (int) studentRepository.findAll().stream()
+                .mapToInt(Student::getAge)
+                .average().orElse(0);
+    }
+
+    private String getExtension(String fileName) {
+        return fileName.substring(fileName.lastIndexOf(".") + 1);
+    }
+
+    private byte[] generateImagePreview(Path filePath) throws IOException {
+        try (InputStream is = Files.newInputStream(filePath);
+             BufferedInputStream bis = new BufferedInputStream(is, 1024);
+             ByteArrayOutputStream baos = new ByteArrayOutputStream()){
+            BufferedImage image = ImageIO.read(bis);
+            int height = image.getHeight() / (image.getWidth() / 100);
+            BufferedImage preview = new BufferedImage(100, height, image.getType());
+            Graphics2D graphics = preview.createGraphics();
+            graphics.drawImage(image, 0, 0, 100, height, null);
+            graphics.dispose();
+            ImageIO.write(preview, getExtension(filePath.getFileName().toString()), baos);
+            return baos.toByteArray();
+        }
     }
 }

@@ -1,12 +1,23 @@
 package pro.sku.SQL.controller;
 
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import pro.sku.SQL.model.Avatar;
 import pro.sku.SQL.model.Faculty;
 import pro.sku.SQL.model.Student;
 import pro.sku.SQL.service.StudentService;
 
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -14,116 +25,116 @@ import java.util.List;
 @RestController
 @RequestMapping("/student")
 public class StudentController {
-
     private final StudentService studentService;
-
     public StudentController(StudentService studentService) {
         this.studentService = studentService;
     }
 
-    @PostMapping("/createStudent")
+    @GetMapping("{id}")
+    public ResponseEntity<Student> getStudentInfo(@PathVariable Long id) {
+        Student student = studentService.findStudent(id);
+        if (student == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(student);
+    }
+
+    @PostMapping
     public Student createStudent(@RequestBody Student student) {
-        return studentService.createStudent(student);
+        return studentService.addStudent(student);
     }
 
-    @GetMapping("/findStudentById/{id}")
-    public ResponseEntity<Student> findStudent(@PathVariable long id) {
-        Student studentFound = studentService.findStudent(id);
-        if (studentFound == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(studentFound);
-    }
-
-    @PutMapping("/editStudent")
+    @PutMapping
     public ResponseEntity<Student> editStudent(@RequestBody Student student) {
-        Student studentToChange = studentService.editStudent(student);
-        if (studentToChange == null) {
-            return ResponseEntity.notFound().build();
+        Student foundStudent = studentService.editStudent(student);
+        if (foundStudent == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
-        return ResponseEntity.ok(studentToChange);
+        return ResponseEntity.ok(foundStudent);
     }
 
-    @DeleteMapping("/deleteStudent/{id}")
-    public ResponseEntity<Void> deleteStudent(@PathVariable long id) {
+    @DeleteMapping("{id}")
+    public ResponseEntity<Void> deleteStudent(@PathVariable Long id) {
         studentService.deleteStudent(id);
         return ResponseEntity.ok().build();
-
     }
 
-    @GetMapping("/findStudentByAge/{age}")
-    public ResponseEntity<Collection<Student>> findStudents(@PathVariable int age) {
+    @GetMapping
+    public ResponseEntity<Collection<Student>> findStudents(@RequestParam(required = false) int age) {
         if (age > 0) {
             return ResponseEntity.ok(studentService.findByAge(age));
         }
         return ResponseEntity.ok(Collections.emptyList());
     }
 
-    @GetMapping("/findStudentByAgeBetween")
-    public ResponseEntity<Collection<Student>> findByAgeBetween(@RequestParam(required = true) int max, @RequestParam(required = true) int min) {
-        List<Student> studentToFind = studentService.findByAgeBetween(min, max);
-        if (studentToFind == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(studentToFind);
+    @GetMapping("/findByAgeBetween")
+    public ResponseEntity<Collection<Student>> findStudentByAgeBetween(@RequestParam int min, @RequestParam int max) {
+        return ResponseEntity.ok(studentService.findStudentByAgeBetween(min, max));
     }
 
-    @GetMapping("/facultyOfStudent")
-    public ResponseEntity<Faculty> findFacultyOfStudent(@RequestParam long id) {
-        Faculty facultyToFind = studentService.findFacultyOfStudent(id);
-        if (facultyToFind == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(facultyToFind);
+    @GetMapping("/getFacultyOfStudent/{id}")
+    public ResponseEntity<Faculty> getFacultyOfStudent(@PathVariable long id) {
+        return ResponseEntity.ok(studentService.getFacultyOfStudent(id));
     }
 
-    @GetMapping("/getAllStudents")
-    public ResponseEntity<List<Student>> getAllStudents() {
-        List<Student> studentsList = studentService.getAllStudents();
-        if (studentsList.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(studentsList);
+    @GetMapping("/studentsOfFaculty/{id}")
+    public ResponseEntity<Collection<Student>> getStudentsOfFaculty(@PathVariable long id) {
+        return ResponseEntity.ok(studentService.getStudentsOfFaculty(id));
     }
 
-    @GetMapping("/getAmountOfStudents")
-    public ResponseEntity<Integer> getAmountOfStudents() {
-        int amount=studentService.getAmountOfStudents();
-        if (amount == 0) {
-            return ResponseEntity.notFound().build();
+    @PostMapping(value = "/{id}/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<String> uploadAvatar(@PathVariable Long id, @RequestParam MultipartFile avatar) throws IOException {
+        if (avatar.getSize() > 1024 * 300) {
+            return ResponseEntity.badRequest().body("File is too big");
         }
-        return ResponseEntity.ok(amount);
+        studentService.uploadAvatar(id, avatar);
+        return ResponseEntity.ok().build();
     }
-    @GetMapping("/getAverageAgeOfStudents")
-    public ResponseEntity<Integer> getAverageAgeOfStudents() {
-        int ageAverage=studentService.getAverageAge();
-        if (ageAverage== 0) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(ageAverage);
+
+    @GetMapping(value = "/{id}/avatar/preview")
+    public ResponseEntity<byte[]> downloadAvatar(@PathVariable Long id) {
+        Avatar avatar = studentService.findAvatar(id);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(avatar.getMediaType()));
+        headers.setContentLength(avatar.getData().length);
+        return ResponseEntity.status(HttpStatus.OK).headers(headers).body(avatar.getData());
     }
-    @GetMapping("/getLastStudents")
-    public ResponseEntity<List<Student>> getLastStudents() {
-        List <Student> lastStudents = studentService.getLastStudents();
-        if (lastStudents.isEmpty()) {
-            return ResponseEntity.notFound().build();
+
+    @GetMapping(value = "/{id}/avatar")
+    public void downloadAvatar(@PathVariable Long id, HttpServletResponse response) throws IOException {
+        Avatar avatar = studentService.findAvatar(id);
+        Path path = Path.of(avatar.getFilePath());
+        try (InputStream is = Files.newInputStream(path);
+             OutputStream os = response.getOutputStream()) {
+            response.setStatus(200);
+            response.setContentType(avatar.getMediaType());
+            response.setContentLength((int) avatar.getFileSize());
+            is.transferTo(os);
         }
-        return ResponseEntity.ok(lastStudents);
     }
-    @GetMapping ("/getStudentsNameStartsWith/{letter}")
-    public ResponseEntity <List<String>> getStudentsNameStartsWith(@ PathVariable ("letter") String letter) {
-        List <String> exp = studentService.getStudentsNameStartsWith (letter);
-        if (exp.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(exp);
+
+    @GetMapping(value = "/count")
+    public int getAllStudents() {
+        return studentService.getAllStudents();
     }
-    @GetMapping ("/getAverageAgeWithStream")
-    public ResponseEntity <Double> getAverageAgeWithStream () {
-        Double age = studentService.getAverageAgeWithStream();
-        if (age==0) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(age);
+
+    @GetMapping(value = "/avgAge")
+    public int getAverageAgeOfStudents() {
+        return studentService.getAverageAgeOfStudents();
+    }
+
+    @GetMapping(value = "/lastFive")
+    public ResponseEntity<Collection<Student>> getFiveLastStudentById() {
+        return ResponseEntity.ok(studentService.getFiveLastStudentById());
+    }
+
+    @GetMapping("/withA")
+    public ResponseEntity<Collection<String>> getAllStudentStartWithA() {
+        return ResponseEntity.ok(studentService.getAllStudentStartWithA());
+    }
+
+    @GetMapping("/streamAvgAge")
+    public int getAverageAgeOfStudentsFromStream() {
+        return studentService.getAverageAgeOfStudentsFromStream();
     }
 }
